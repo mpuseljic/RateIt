@@ -1,1 +1,1 @@
-# RateIt
+### Projekt iz kolegija Raspodijeljeni sustavi 
