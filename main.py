@@ -1,9 +1,10 @@
 import uuid
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from database import users_table
-from models import User
-from auth import hash_password
+from models import User, LoginRequest
+from auth import hash_password, verify_password, create_jwt_token
+from fastapi import FastAPI, HTTPException, status
 
 app = FastAPI()
 
@@ -27,3 +28,23 @@ def register(user: User):
     })
     
     return {"message": "User je uspješno registriran..", "user_id": user_id}
+
+# prijava usera i generiranje jwt
+@app.post("/login")
+def login(login_data: LoginRequest):
+    response = users_table.scan(
+        FilterExpression="username = :u",
+        ExpressionAttributeValues={":u": login_data.username}
+    )
+
+    items = response.get("Items", [])
+    if not items:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Neispravni podaci.")
+
+    user = items[0]
+
+    if not verify_password(login_data.password, user["password"]):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Neispravni podaci.")
+
+    token = create_jwt_token(user["user_id"])
+    return {"access_token": token, "token_type": "bearer"}
