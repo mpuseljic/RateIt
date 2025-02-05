@@ -69,12 +69,13 @@ def get_user(user_id: str):
 # dodavanje nove recenzije
 @app.post("/reviews")
 def add_review(review: Review):
+    try:
+        review.validate_category(review.category)  
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
     reviews_table.put_item(Item=review.dict())
-    return {
-        "message": "Recenzija uspješno dodana",
-        "review_id": review.review_id,
-        "product_name": review.product_name
-    }
+    return {"message": "Recenzija uspješno dodana!", "review_id": review.review_id}
     
 # prikaz svih recenzija
 @app.get("/reviews")
@@ -197,3 +198,24 @@ def get_average_rating(product_name: str):
 
     avg_rating = sum(r["rating"] for r in reviews) / len(reviews)
     return {"product_name": product_name, "average_rating": round(avg_rating, 2)}
+
+# dohvaćanje proizvoda po kategoriji
+@app.get("/categories/{category_name}/reviews")
+def get_reviews_by_category(category_name: str):
+    response = reviews_table.scan(
+        FilterExpression="category = :c",
+        ExpressionAttributeValues={":c": category_name}
+    )
+    reviews = response.get("Items", [])
+
+    if not reviews:
+        raise HTTPException(status_code=404, detail="Nema recenzija za ovu kategoriju.")
+
+    products = {}
+    for review in reviews:
+        product_name = review["product_name"]
+        if product_name not in products:
+            products[product_name] = []
+        products[product_name].append(review)
+
+    return {"category": category_name, "products": products}
