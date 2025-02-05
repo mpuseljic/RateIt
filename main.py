@@ -219,3 +219,68 @@ def get_reviews_by_category(category_name: str):
         products[product_name].append(review)
 
     return {"category": category_name, "products": products}
+
+# dodavanje prozivoda u omiljeno
+@app.post("/users/{username}/favorites/{product_name}")
+def add_favorite(username: str, product_name: str):
+    response = users_table.scan(
+        FilterExpression="username = :u",
+        ExpressionAttributeValues={":u": username}
+    )
+    
+    items = response.get("Items", [])
+    if not items:
+        raise HTTPException(status_code=404, detail="Korisnik nije pronađen")
+    
+    user = items[0]  
+    
+    if "favorites" not in user:
+        user["favorites"] = []
+
+    if product_name in user["favorites"]:
+        raise HTTPException(status_code=400, detail="Proizvod je već u favoritima")
+
+    user["favorites"].append(product_name)
+
+    users_table.put_item(Item=user)
+
+    return {"message": f"Proizvod '{product_name}' dodan u favorite korisnika '{username}'"}
+
+# pregled omiljenih proizvoda
+@app.get("/users/{username}/favorites")
+def get_favorites(username: str):
+    response = users_table.scan(
+        FilterExpression="username = :u",
+        ExpressionAttributeValues={":u": username}
+    )
+
+    items = response.get("Items", [])
+    if not items:
+        raise HTTPException(status_code=404, detail="Korisnik nije pronađen")
+
+    user = items[0] 
+    return {"favorites": user.get("favorites", [])}
+
+
+# uklanjanje proizvoda iz omiljeno
+@app.delete("/users/{username}/favorites/{product_name}")
+def remove_favorite(username: str, product_name: str):
+    response = users_table.scan(
+        FilterExpression="username = :u",
+        ExpressionAttributeValues={":u": username}
+    )
+
+    items = response.get("Items", [])
+    if not items:
+        raise HTTPException(status_code=404, detail="Korisnik nije pronađen")
+
+    user = items[0]
+
+    if "favorites" not in user or product_name not in user["favorites"]:
+        raise HTTPException(status_code=400, detail="Proizvod nije pronađen u favoritima")
+
+    user["favorites"].remove(product_name)
+
+    users_table.put_item(Item=user)
+
+    return {"message": f"Proizvod '{product_name}' uklonjen iz favorita korisnika '{username}'"}

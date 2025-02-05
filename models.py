@@ -25,6 +25,11 @@ class User(BaseModel):
     username: str
     email: EmailStr
     password: str
+    favorites: List[str] = []
+    
+class FavoriteProduct(BaseModel):
+    product_name: str
+    
 
 class LoginRequest(BaseModel):
     username: str
@@ -56,4 +61,6 @@ class Comment(BaseModel):
     comment: str
     created_at: str = Field(default_factory=lambda: datetime.datetime.utcnow().isoformat())
     
+    
+
    
