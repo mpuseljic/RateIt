@@ -301,3 +301,17 @@ def get_reviews_by_tag(product_name: str, tag: Optional[str] = None):
         raise HTTPException(status_code=404, detail="Nema recenzija za traženi filter.")
 
     return {"product_name": product_name, "reviews": reviews}
+
+# najpopularniji proizvodi
+@app.get("/products/top-rated")
+def get_top_rated_products():
+    response = reviews_table.scan()
+    all_reviews = response.get("Items", [])
+    
+    product_counts = {}
+    for review in all_reviews:
+        product_counts[review["product_name"]] = product_counts.get(review["product_name"], 0) + 1
+
+    top_products = sorted(product_counts.items(), key=lambda x: x[1], reverse=True)[:5]
+
+    return {"top_rated_products": [{"product_name": p[0], "review_count": p[1]} for p in top_products]}
