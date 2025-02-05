@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, Field
-from typing import Optional
+from typing import Optional, List
 import uuid
 import datetime
 
@@ -19,4 +19,10 @@ class Review(BaseModel):
     product_name: str  
     rating: int = Field(ge=1, le=5) 
     comment: Optional[str] = None
+    created_at: str = Field(default_factory=lambda: datetime.datetime.utcnow().isoformat())
+    comments: List[dict] = []
+    
+class Comment(BaseModel):
+    username: str
+    comment: str
     created_at: str = Field(default_factory=lambda: datetime.datetime.utcnow().isoformat())

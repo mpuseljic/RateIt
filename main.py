@@ -5,6 +5,8 @@ from database import users_table, reviews_table
 from models import User, LoginRequest, Review
 from auth import hash_password, verify_password, create_jwt_token
 from fastapi import FastAPI, HTTPException, status
+from decimal import Decimal
+from typing import Optional
 
 app = FastAPI()
 
@@ -93,19 +95,59 @@ def get_reviews_for_user(username: str):
         raise HTTPException(status_code=404, detail="Ovaj korisnik nema recenzija.")
     return {"username": username, "reviews": reviews}
 
-# prikaz recenzija za određeni proizvod
+# prikaz recenzija za određeni proizvod i mogućnost filtriranja po ratingu
 @app.get("/products/{product_name}/reviews")
-def get_reviews_by_product_name(product_name: str):
+def get_reviews_by_product_name(product_name: str, min_rating: Optional[int] = None):
     if not product_name:
         raise HTTPException(status_code=400, detail="product_name je obavezan.")
 
+    filter_expression = "product_name = :p"
+    expression_values = {":p": product_name}
+
+    if min_rating is not None:
+        filter_expression += " AND rating >= :r"
+        expression_values[":r"] = Decimal(min_rating) 
+
+    response = reviews_table.scan(
+        FilterExpression=filter_expression,
+        ExpressionAttributeValues=expression_values
+    )
+
+    reviews = response.get("Items", [])
+    if not reviews:
+        raise HTTPException(status_code=404, detail="Nema recenzija koje zadovoljavaju kriterije.")
+
+    return {"product_name": product_name, "reviews": reviews}
+
+# sortiranje po datumu
+@app.get("/products/{product_name}/sortingreviews")
+def sort_reviews(product_name: str, sort: str = "desc"):
     response = reviews_table.scan(
         FilterExpression="product_name = :p",
         ExpressionAttributeValues={":p": product_name}
     )
 
     reviews = response.get("Items", [])
+
     if not reviews:
         raise HTTPException(status_code=404, detail="Nema recenzija za ovaj proizvod.")
 
+    reviews.sort(key=lambda x: x["created_at"], reverse=(sort == "desc"))
+
     return {"product_name": product_name, "reviews": reviews}
+
+# lajkanje recenzija
+@app.post("/reviews/{review_id}/like")
+def like_review(review_id: str):
+    response = reviews_table.get_item(Key={"review_id": review_id})
+    
+    if "Item" not in response:
+        raise HTTPException(status_code=404, detail="Recenzija nije pronađena.")
+
+    review = response["Item"]
+    review["likes"] = review.get("likes", 0) + 1
+
+    reviews_table.put_item(Item=review)
+    
+    return {"message": "Lajk uspješno dodan", "review": review}
+
