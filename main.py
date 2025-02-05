@@ -2,7 +2,7 @@ import uuid
 from fastapi import FastAPI, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from database import users_table, reviews_table
-from models import User, LoginRequest, Review
+from models import User, LoginRequest, Review, Comment
 from auth import hash_password, verify_password, create_jwt_token
 from fastapi import FastAPI, HTTPException, status
 from decimal import Decimal
@@ -151,3 +151,34 @@ def like_review(review_id: str):
     
     return {"message": "Lajk uspješno dodan", "review": review}
 
+# dodavanje komentara na recenziju
+@app.post("/reviews/{review_id}/comments")
+def add_comment(review_id: str, comment_data: Comment):
+    response = reviews_table.get_item(Key={"review_id": review_id})
+    
+    if "Item" not in response:
+        raise HTTPException(status_code=404, detail="Recenzija nije pronađena.")
+
+    review = response["Item"]
+    new_comment = comment_data.dict()
+    review["comments"] = review.get("comments", []) + [new_comment]
+
+    reviews_table.put_item(Item=review)
+    return {"message": "Komentar uspješno dodan", "review": review}
+
+# prikaz recenzija s komentarima
+@app.get("/products/{product_name}/reviews/comments")
+def get_reviews_and_comments(product_name: str):
+    response = reviews_table.scan(
+        FilterExpression="product_name = :p",
+        ExpressionAttributeValues={":p": product_name}
+    )
+
+    reviews = response.get("Items", [])
+    if not reviews:
+        raise HTTPException(status_code=404, detail="Nema recenzija za ovaj proizvod.")
+
+    for review in reviews:
+        review["comments"] = review.get("comments", [])
+
+    return {"product_name": product_name, "reviews": reviews}
