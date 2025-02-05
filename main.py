@@ -284,3 +284,20 @@ def remove_favorite(username: str, product_name: str):
     users_table.put_item(Item=user)
 
     return {"message": f"Proizvod '{product_name}' uklonjen iz favorita korisnika '{username}'"}
+
+# pretraga recenzija po oznakama
+@app.get("/products/{product_name}/reviews")
+def get_reviews_by_tag(product_name: str, tag: Optional[str] = None):
+    response = reviews_table.scan(
+        FilterExpression="product_name = :p",
+        ExpressionAttributeValues={":p": product_name}
+    )
+    reviews = response.get("Items", [])
+
+    if tag:
+        reviews = [r for r in reviews if tag in r.get("tags", [])]
+
+    if not reviews:
+        raise HTTPException(status_code=404, detail="Nema recenzija za traženi filter.")
+
+    return {"product_name": product_name, "reviews": reviews}
