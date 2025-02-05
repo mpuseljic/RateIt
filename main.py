@@ -182,3 +182,18 @@ def get_reviews_and_comments(product_name: str):
         review["comments"] = review.get("comments", [])
 
     return {"product_name": product_name, "reviews": reviews}
+
+# prosječna ocjene proizvoda
+@app.get("/products/{product_name}/rating")
+def get_average_rating(product_name: str):
+    response = reviews_table.scan(
+        FilterExpression="product_name = :p",
+        ExpressionAttributeValues={":p": product_name}
+    )
+
+    reviews = response.get("Items", [])
+    if not reviews:
+        raise HTTPException(status_code=404, detail="Nema recenzija za ovaj proizvod.")
+
+    avg_rating = sum(r["rating"] for r in reviews) / len(reviews)
+    return {"product_name": product_name, "average_rating": round(avg_rating, 2)}
