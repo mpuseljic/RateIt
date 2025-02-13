@@ -1,8 +1,9 @@
-from fastapi import APIRouter, HTTPException
-from database import reviews_table
+from fastapi import APIRouter, HTTPException, UploadFile, File
+from database import reviews_table, S3_BUCKET_NAME, s3_client
 from models import Review, Comment
 from typing import Optional
 from decimal import Decimal
+
 
 router = APIRouter()
 
@@ -179,3 +180,55 @@ def get_top_rated_products():
     top_products = sorted(product_counts.items(), key=lambda x: x[1], reverse=True)[:5]
 
     return {"top_rated_products": [{"product_name": p[0], "review_count": p[1]} for p in top_products]}
+
+
+from fastapi import UploadFile, File
+from database import s3_client, S3_BUCKET_NAME
+import uuid
+
+@router.post("/{review_id}/upload-image")
+def upload_review_image(review_id: str, file: UploadFile = File(...)):
+    
+    file_extension = file.filename.split(".")[-1]  
+    file_key = f"reviews/{review_id}/{uuid.uuid4()}.{file_extension}" 
+
+    s3_client.upload_fileobj(file.file, S3_BUCKET_NAME, file_key)
+
+    image_url = f"https://{S3_BUCKET_NAME}.s3.amazonaws.com/{file_key}"
+
+    response = reviews_table.get_item(Key={"review_id": review_id})
+    if "Item" not in response:
+        raise HTTPException(status_code=404, detail="Recenzija nije pronađena.")
+
+    review = response["Item"]
+    review["image_url"] = image_url
+    reviews_table.put_item(Item=review)
+
+    return {"message": "Slika uspješno uploadana!", "image_url": image_url}
+
+
+@router.get("/{review_id}/image")
+def get_review_image(review_id: str):
+    
+    response = reviews_table.get_item(Key={"review_id": review_id})
+    if "Item" not in response or "image_url" not in response["Item"]:
+        raise HTTPException(status_code=404, detail="Slika nije pronađena.")
+
+    return {"image_url": response["Item"]["image_url"]}
+
+@router.delete("/{review_id}/image")
+def delete_review_image(review_id: str):
+
+    response = reviews_table.get_item(Key={"review_id": review_id})
+    if "Item" not in response or "image_url" not in response["Item"]:
+        raise HTTPException(status_code=404, detail="Slika nije pronađena.")
+
+    image_url = response["Item"]["image_url"]
+    file_key = image_url.split(f"https://{S3_BUCKET_NAME}.s3.amazonaws.com/")[-1]  
+
+    s3_client.delete_object(Bucket=S3_BUCKET_NAME, Key=file_key)
+
+    response["Item"].pop("image_url", None)
+    reviews_table.put_item(Item=response["Item"])
+
+    return {"message": "Slika obrisana!"}
