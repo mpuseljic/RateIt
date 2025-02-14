@@ -1,5 +1,6 @@
 # RateIt  
 - Profesor: doc. dr. sc. Nikola Tanković
+- Student: Mirna Pušeljić
 
 ## Studijski smjer 
 ```
