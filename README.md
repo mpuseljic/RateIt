@@ -1,5 +1,24 @@
 # RateIt  
+- Profesor: doc. dr. sc. Nikola Tanković
 
+## Studijski smjer 
+```
+Studij: Diplomski online studij informatika
+```
+
+## Kolegij
+```
+Kolegij: Raspodijeljeni sustavi
+Akademska godina: 2024./2025.
+```
+
+## Linkovi
+- Link na video: 
+
+- Link na dokumentaciju:
+  
+- Javni URL aplikacije: 
+  
 ## Opis projekta  
 RateIt je web aplikacija koja korisnicima omogućuje dijeljenje recenzija i ocjena proizvoda. 
 Cilj aplikacije je stvoriti zajednicu u kojoj korisnici mogu razmjenjivati svoja iskustva o različitim proizvodima, pomažući jedni drugima u donošenju informiranih odluka prilikom kupnje. 
