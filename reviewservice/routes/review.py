@@ -1,5 +1,5 @@
 import aiohttp
-from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Header
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Header, Body
 from database import reviews_table, S3_BUCKET_NAME, s3_client
 from models import Review, Comment
 from typing import Optional
@@ -9,7 +9,6 @@ import uuid
 router = APIRouter()
 
 # provjera tokena
-
 async def verify_token(authorization: str = Header(None)):
     if not authorization:
         raise HTTPException(status_code=401, detail="Token nedostaje")
@@ -19,31 +18,24 @@ async def verify_token(authorization: str = Header(None)):
             if resp.status != 200:
                 raise HTTPException(status_code=401, detail="Nevažeći token")
             data = await resp.json()
-            return {"user_id": data["user_id"], "token": authorization.split("Bearer ")[1]}  # Vraćamo i token
+            return {"user_id": data["user_id"], "token": authorization.split("Bearer ")[1]}  
 
 
 # dodaje recenziju samo ako user posroji
-
 @router.post("/")
 async def add_review(review: Review, auth=Depends(verify_token)):
-    user_id = auth["user_id"]  # Ovo vraća ID korisnika iz tokena
-
-    # Dohvati korisničko ime iz user servisa
+    user_id = auth["user_id"]  
     async with aiohttp.ClientSession() as session:
         async with session.get(f"http://userservice:8002/users/me", headers={"Authorization": f"Bearer {auth['token']}"}) as resp:
             if resp.status != 200:
                 raise HTTPException(status_code=404, detail="Korisnik nije pronađen")
             user_data = await resp.json()
 
-    username = user_data["username"]  # Dohvaćeno korisničko ime
-
-    # Spremi recenziju s korisničkim imenom
+    username = user_data["username"] 
     review.username = username
     reviews_table.put_item(Item=review.dict())
 
     return {"message": "Recenzija uspješno dodana!", "review_id": review.review_id}
-
-
 
 # pregled svih recenzija
 @router.get("/")
@@ -239,3 +231,52 @@ def delete_review_image(review_id: str):
     reviews_table.put_item(Item=response["Item"])
 
     return {"message": "Slika obrisana!"}
+
+# ažuriranje recenzije 
+@router.put("/{review_id}")
+async def update_review(review_id: str, updated_review: Review = Body(...), auth=Depends(verify_token)):
+    user_id = auth["user_id"]  
+    async with aiohttp.ClientSession() as session:
+        async with session.get(f"http://userservice:8002/users/me", headers={"Authorization": f"Bearer {auth['token']}"}) as resp:
+            if resp.status != 200:
+                raise HTTPException(status_code=404, detail="Korisnik nije pronađen")
+            user_data = await resp.json()
+
+    username = user_data["username"]
+    response = reviews_table.get_item(Key={"review_id": review_id})
+    if "Item" not in response:
+        raise HTTPException(status_code=404, detail="Recenzija nije pronađena.")
+
+    review = response["Item"]
+    if review["username"] != username: 
+        raise HTTPException(status_code=403, detail="Nemate dopuštenje za uređivanje ove recenzije.")
+    update_data = updated_review.dict(exclude_unset=True)
+    review.update(update_data)
+
+    reviews_table.put_item(Item=review)
+
+    return {"message": "Recenzija uspješno ažurirana!", "review": review}
+
+# brisanje recenzije 
+@router.delete("/{review_id}")
+async def delete_review(review_id: str, auth=Depends(verify_token)):
+    user_id = auth["user_id"]  
+    async with aiohttp.ClientSession() as session:
+        async with session.get(f"http://userservice:8002/users/me", headers={"Authorization": f"Bearer {auth['token']}"}) as resp:
+            if resp.status != 200:
+                raise HTTPException(status_code=404, detail="Korisnik nije pronađen")
+            user_data = await resp.json()
+
+    username = user_data["username"] 
+    response = reviews_table.get_item(Key={"review_id": review_id})
+    if "Item" not in response:
+        raise HTTPException(status_code=404, detail="Recenzija nije pronađena.")
+
+    review = response["Item"]
+    if review["username"] != username:  
+        raise HTTPException(status_code=403, detail="Nemate dopuštenje za brisanje ove recenzije.")
+
+    reviews_table.delete_item(Key={"review_id": review_id})
+
+    return {"message": "Recenzija uspješno obrisana!"}
+
