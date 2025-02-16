@@ -16,9 +16,8 @@ Akademska godina: 2024./2025.
 ## Linkovi
 - Link na video: 
 
-- Link na dokumentaciju:
-  
-- Javni URL aplikacije: 
+- Link na dokumentaciju: [RateItProjekt.pdf](https://github.com/user-attachments/files/18812724/RateItProjekt.pdf)
+
   
 ## Opis projekta  
 RateIt je web aplikacija koja korisnicima omogućuje dijeljenje recenzija i ocjena proizvoda. 
