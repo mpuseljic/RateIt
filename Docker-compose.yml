@@ -1,38 +1,48 @@
-version: "3.8"
-
 services:
   authservice:
     image: authservice:1.0
-    container_name: authservice
     ports:
-      - "8001:8001"
+      - "8001"
     env_file:
       - .env
     networks:
       - app_network
+    deploy:
+      replicas: 2
 
   userservice:
     image: userservice:1.0
-    container_name: userservice
     ports:
-      - "8002:8002"
+      - "8002"
     env_file:
       - .env
     depends_on:
       - authservice
     networks:
       - app_network
+    deploy:
+      replicas: 2
 
   reviewservice:
     image: reviewservice:1.0
-    container_name: reviewservice
     ports:
-      - "8003:8003"
+      - "8003"
     env_file:
       - .env
     depends_on:
       - authservice
       - userservice
+    networks:
+      - app_network
+    deploy:
+      replicas: 3
+
+  nginx:
+    image: nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
     networks:
       - app_network
 
