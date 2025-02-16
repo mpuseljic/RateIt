@@ -2,7 +2,7 @@ FROM python:3.12-slim
 WORKDIR /app
 
 COPY . /app
-# COPY .env /app/.env 
+COPY .env /app/.env 
 RUN pip install -r requirements.txt
 
 EXPOSE 8001
