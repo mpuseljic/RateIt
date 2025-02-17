@@ -1,6 +1,7 @@
 # RateIt  
 - Nositelj: doc. dr. sc. Nikola Tanković
 - Asistent: mag. inf. Luka Blašković
+_________________________
 - Student: Mirna Pušeljić
 
 ## Studijski smjer 
