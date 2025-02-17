@@ -16,7 +16,7 @@ Akademska godina: 2024./2025.
 ```
 
 ## Linkovi
-- Link na video: 
+- Link na video: https://youtu.be/DUPaZbmegDw?si=g2KfPhhuUd22y76v
 
 - Link na dokumentaciju: [RateItProjekt.pdf](https://github.com/user-attachments/files/18812724/RateItProjekt.pdf)
 
