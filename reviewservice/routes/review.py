@@ -18,13 +18,13 @@ async def verify_token(authorization: str = Header(None)):
             if resp.status != 200:
                 raise HTTPException(status_code=401, detail="Nevažeći token")
             data = await resp.json()
-            return {"user_id": data["user_id"], "token": authorization.split("Bearer ")[1]}  
+            return {"username": data["username"], "token": authorization.split("Bearer ")[1]}  
 
 
 # dodaje recenziju samo ako user posroji
 @router.post("/")
 async def add_review(review: Review, auth=Depends(verify_token)):
-    user_id = auth["user_id"]  
+    username = auth["username"]  
     async with aiohttp.ClientSession() as session:
         async with session.get(f"http://userservice:8002/users/me", headers={"Authorization": f"Bearer {auth['token']}"}) as resp:
             if resp.status != 200:
@@ -235,7 +235,7 @@ def delete_review_image(review_id: str):
 # ažuriranje recenzije 
 @router.put("/{review_id}")
 async def update_review(review_id: str, updated_review: Review = Body(...), auth=Depends(verify_token)):
-    user_id = auth["user_id"]  
+    username = auth["username"]  
     async with aiohttp.ClientSession() as session:
         async with session.get(f"http://userservice:8002/users/me", headers={"Authorization": f"Bearer {auth['token']}"}) as resp:
             if resp.status != 200:
@@ -260,7 +260,7 @@ async def update_review(review_id: str, updated_review: Review = Body(...), auth
 # brisanje recenzije 
 @router.delete("/{review_id}")
 async def delete_review(review_id: str, auth=Depends(verify_token)):
-    user_id = auth["user_id"]  
+    username = auth["username"]  
     async with aiohttp.ClientSession() as session:
         async with session.get(f"http://userservice:8002/users/me", headers={"Authorization": f"Bearer {auth['token']}"}) as resp:
             if resp.status != 200:

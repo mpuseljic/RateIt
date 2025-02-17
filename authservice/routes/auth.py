@@ -7,6 +7,7 @@ from database import users_table
 from models import User, LoginRequest, TokenResponse
 from passlib.context import CryptContext
 from dotenv import load_dotenv
+from boto3.dynamodb.conditions import Key
 
 load_dotenv()
 
@@ -22,9 +23,9 @@ def hash_password(password: str):
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
 
-def create_jwt_token(user_id: str):
+def create_jwt_token(username: str):
     expiration = datetime.datetime.utcnow() + datetime.timedelta(hours=2)
-    token_data = {"sub": user_id, "exp": expiration}
+    token_data = {"sub": username, "exp": expiration}
     return jwt.encode(token_data, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
 
 def decode_jwt_token(token: str):
@@ -38,8 +39,9 @@ def decode_jwt_token(token: str):
 @router.post("/register")
 def register(user: User):
     user_id = str(uuid.uuid4())
-    response = users_table.scan(FilterExpression="username = :u",
-                                ExpressionAttributeValues={":u": user.username})
+    response = users_table.query(
+        KeyConditionExpression=Key("username").eq(user.username)
+        )
     if response.get("Items"):
         raise HTTPException(status_code=400, detail="Korisnik već postoji.")
 
@@ -54,14 +56,15 @@ def register(user: User):
 # prijava i generiranje tokena
 @router.post("/login", response_model=TokenResponse)
 def login(login_data: LoginRequest):
-    response = users_table.scan(FilterExpression="username = :u",
-                                ExpressionAttributeValues={":u": login_data.username})
+    response = users_table.query(
+        KeyConditionExpression=Key("username").eq(login_data.username)
+    )
     items = response.get("Items", [])
     
     if not items or not verify_password(login_data.password, items[0]["password"]):
         raise HTTPException(status_code=401, detail="Neispravni podaci")
 
-    token = create_jwt_token(items[0]["user_id"])
+    token = create_jwt_token(items[0]["username"])
     return {"access_token": token, "token_type": "bearer"}
 
 # provjera tokena za user servis
@@ -72,8 +75,13 @@ def verify_token(request: Request):
         raise HTTPException(status_code=401, detail="Nema tokena")
 
     token = token.split("Bearer ")[1]
-    user_id = decode_jwt_token(token)
-    if not user_id:
+    username = decode_jwt_token(token)
+    if not username:
         raise HTTPException(status_code=401, detail="Neispravni token")
+    
+    response = users_table.get_item(Key={"username": username})
+    user = response.get("Item")
+    if not user:
+        raise HTTPException(status_code=404, detail="Korisnik nije pronađen")
 
-    return {"user_id": user_id}
+    return {"username": username, "email": user["email"]}

@@ -25,8 +25,8 @@ def create_users_table():
         if users_table_name not in existing_tables:
             table = dynamodb.create_table(
                 TableName=users_table_name,
-                KeySchema=[{"AttributeName": "user_id", "KeyType": "HASH"}],
-                AttributeDefinitions=[{"AttributeName": "user_id", "AttributeType": "S"}],
+                KeySchema=[{"AttributeName": "username", "KeyType": "HASH"}],
+                AttributeDefinitions=[{"AttributeName": "username", "AttributeType": "S"}],
                 BillingMode="PAY_PER_REQUEST"
             )
             print(f"Tablica '{users_table_name}' kreirana. Čekanje na aktivaciju...")

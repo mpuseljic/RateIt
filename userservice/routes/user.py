@@ -17,13 +17,13 @@ async def get_current_user(request: Request):
 # vraća podatke korisnika na temelju tokena
 @router.get("/me")
 async def get_user_profile(user_data: dict = Depends(get_current_user)):
-    user_id = user_data["user_id"]
-    response = users_table.get_item(Key={"user_id": user_id})
+    username= user_data["username"]
+    response = users_table.get_item(Key={"username": username})
     user = response.get("Item")
     if not user:
         raise HTTPException(status_code=404, detail="Korisnik nije pronađen")
     return {
-        "user_id": user["user_id"],
+        
         "username": user["username"],
         "email": user["email"]
     }
@@ -31,8 +31,8 @@ async def get_user_profile(user_data: dict = Depends(get_current_user)):
 # dodavanje proizvoda u omiljeno
 @router.post("/favorites/{product_name}")
 async def add_favorite(product_name: str, user_data: dict = Depends(get_current_user)):
-    user_id = user_data["user_id"]
-    response = users_table.get_item(Key={"user_id": user_id})
+    username = user_data["username"]
+    response = users_table.get_item(Key={"username": username})
     user = response.get("Item")
     if not user:
         raise HTTPException(status_code=404, detail="Korisnik nije pronađen")
@@ -48,8 +48,8 @@ async def add_favorite(product_name: str, user_data: dict = Depends(get_current_
 # pregled omiljenih proizvoda
 @router.get("/favorites")
 async def get_favorites(user_data: dict = Depends(get_current_user)):
-    user_id = user_data["user_id"]
-    response = users_table.get_item(Key={"user_id": user_id})
+    username = user_data["username"]
+    response = users_table.get_item(Key={"username": username})
     user = response.get("Item")
     if not user:
         raise HTTPException(status_code=404, detail="Korisnik nije pronađen")
@@ -59,8 +59,8 @@ async def get_favorites(user_data: dict = Depends(get_current_user)):
 # uklanjanje proizvoda iz favorita
 @router.delete("/favorites/{product_name}")
 async def remove_favorite(product_name: str, user_data: dict = Depends(get_current_user)):
-    user_id = user_data["user_id"]
-    response = users_table.get_item(Key={"user_id": user_id})
+    username = user_data["username"]
+    response = users_table.get_item(Key={"username": username})
     user = response.get("Item")
     if not user:
         raise HTTPException(status_code=404, detail="Korisnik nije pronađen")
