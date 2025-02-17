@@ -1,5 +1,6 @@
 # RateIt  
-- Profesor: doc. dr. sc. Nikola Tanković
+- Nositelj: doc. dr. sc. Nikola Tanković
+- Asistent: mag. inf. Luka Blašković
 - Student: Mirna Pušeljić
 
 ## Studijski smjer 
